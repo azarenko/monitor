@@ -1,0 +1,9 @@
+C:\projects\personal\monitor\convert\bin\Debug\convert.exe
+C:\projects\personal\monitor\convert\bin\Debug\convert.pdb
+C:\projects\personal\monitor\convert\obj\Debug\convert.csproj.AssemblyReference.cache
+C:\projects\personal\monitor\convert\obj\Debug\convert.Form1.resources
+C:\projects\personal\monitor\convert\obj\Debug\convert.Properties.Resources.resources
+C:\projects\personal\monitor\convert\obj\Debug\convert.csproj.GenerateResource.cache
+C:\projects\personal\monitor\convert\obj\Debug\convert.csproj.CoreCompileInputs.cache
+C:\projects\personal\monitor\convert\obj\Debug\convert.exe
+C:\projects\personal\monitor\convert\obj\Debug\convert.pdb

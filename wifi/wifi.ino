@@ -6,7 +6,7 @@ const char* ssid = "bober";
 const char* password = "buratino";
 
 // Static IP address configuration
-IPAddress local_IP(192, 168, 1, 188); // Change this to your desired IP address
+IPAddress local_IP(192, 168, 1, 184); // Change this to your desired IP address
 IPAddress gateway(192, 168, 1, 1); // Usually your router's IP address
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8); // Google's DNS
@@ -20,6 +20,7 @@ float current = 0;
 
 void setup() {
   Serial.begin(9600); // Initialize serial communication
+
 
   // Connect to WiFi with static IP configuration
   if (!WiFi.config(local_IP, gateway, subnet, dns)) {
@@ -40,6 +41,7 @@ void setup() {
 
   // Define the function to handle HTTP requests
   server.on("/", handleRoot);
+  server.on("/data", handleData);
   server.begin();
   Serial.println("HTTP server started");
 }
@@ -67,51 +69,113 @@ void parseData(String data) {
 
 // Function to handle the root URL
 void handleRoot() {
-  String html = "<html><head><meta http-equiv='refresh' content='1'></head><body style='background: black; color: #00AA00;'><table width='100%' height='100%' border='0'><tr> <th width='20%' align='center' valign='middle'>Battery 1</th> <th width='20%' align='center' valign='middle'>Battery 2</th>";
-  
-  html += getState(current);
-  
-  html += "</tr><tr> <td colspan='2' align='center' valign='middle'>Voltage</td></tr> <tr style='color: #FFFF00'> <td align='center' valign='middle'>";
-  html += String(battery1Voltage);
-  html += " V</td> <td align='center' valign='middle'>";
-  html += String(battery2Voltage - battery1Voltage);
-  html += " V</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>State of charge</td> </tr> <tr style='color: #FFFF00'> <td align='center' valign='middle'>";
-  html += String(getStateOfCharge(battery1Voltage));
-  html += " %</td> <td align='center' valign='middle'>";
-  html += String(getStateOfCharge(battery2Voltage - battery1Voltage));
-  html += " %</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Current</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
-  html += String(current);
-  html += " A</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Power</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
-  html += String(battery2Voltage * current);
-  html += " W</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Time to discharge</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
-  html += convertMinutes(RemainingTime(battery2Voltage, current));
-  html += "</td> </tr></table></body></html>";
+  String html = "<html>"
+"<head>"
+"	<script>"
+"		'use strict';"
+"		function convertMinutes(totalMinutes) {"
+"			let res = Math.floor(totalMinutes / 1440) + 'd ';"
+"			totalMinutes %= 1440;"
+"			res += Math.floor(totalMinutes / 60) + 'h ';"
+"			res += (totalMinutes % 60).toFixed(0) + 'm';"
+"			return res;"
+"		}"
+"		"
+"		function getStateOfCharge1(voltage) {"
+"		  return ((voltage-10.5) / 4.0) * 100.0;"
+"		}"
+"		"
+"	    function getStateOfCharge2(voltage) {"
+"		  return ((voltage-10.5) / 2.3) * 100.0;"
+"		}"
+"        function fetchData() {"
+"            var xhr = new XMLHttpRequest();"
+"            xhr.open('GET', '/data', true);"
+"            xhr.onreadystatechange = function () {"
+"                if (xhr.readyState == 4 && xhr.status == 200) {"
+"                    var data = JSON.parse(xhr.responseText);"
+"                    var battery1Voltage = data.battery1Voltage.toFixed(2);"
+"                    var battery2Voltage = data.battery2Voltage.toFixed(2);"
+"                    var current = data.current.toFixed(2);"
+"                    document.getElementById('battery1Voltage').innerText = battery1Voltage + ' V';"
+"                    document.getElementById('battery2Voltage').innerText = (battery2Voltage - battery1Voltage).toFixed(2) + ' V';"
+"                    document.getElementById('current').innerText = current + ' A';"
+"                    var power = battery2Voltage * current;"
+"                    var remainingPower = ((battery2Voltage-21) / 5.6) * 8000.0;"
+"                    var remainingTime = (remainingPower / power) * 60;"
+"                    document.getElementById('power').innerText = (battery2Voltage * current).toFixed(2) + ' W';"
+"                    document.getElementById('remainingTime').innerText = convertMinutes(remainingTime);"
+"                    document.getElementById('soc1').innerText = current > 8.0 ? getStateOfCharge2(battery1Voltage).toFixed(2) + ' %' : getStateOfCharge1(battery1Voltage).toFixed(2) + ' %';"
+"                    document.getElementById('soc2').innerText = current > 8.0 ? getStateOfCharge2(battery2Voltage - battery1Voltage).toFixed(2) + ' %' : getStateOfCharge1(battery2Voltage - battery1Voltage).toFixed(2) + ' %';"
+"                    var state = document.getElementById('state');"
+"                    if(current > 10)"
+"                    {"
+"						state.style = 'font-size: 120px; color:red;';"
+"                        state.innerText = 'Батарея';"
+"                    }"
+"                    else"
+"                    {"
+"						state.style = 'font-size: 120px;';"
+"                        state.innerText = 'Сеть';"
+"                    }"
+"                }"
+"            };"
+"            xhr.send();"
+"        }"
+"        setInterval(fetchData, 1000);"
+"    </script>"
+"</head>"
+"<body style='background: black; color: #00AA00; font-family: Arial;'>"
+"    <table width='100%' height='100%' border='0'>"
+"        <tr>"
+"            <th width='20%' align='center' valign='middle'>Battery 1</th>"
+"            <th width='20%' align='center' valign='middle'>Battery 2</th>"
+"            <th id='state' width='60%' rowspan='11' align='center' valign='middle' style='font-size: 120px;'>----</th>"
+"        </tr>"
+"        <tr>"
+"            <td colspan='2' align='center' valign='middle'>Voltage</td>"
+"        </tr>"
+"        <tr style='color: #FFFF00'>"
+"            <td align='center' valign='middle' id='battery1Voltage'>-- V</td>"
+"            <td align='center' valign='middle' id='battery2Voltage'>-- V</td>"
+"        </tr>"
+"        <tr>"
+"            <td colspan='2' align='center' valign='middle'>State of charge</td>"
+"        </tr>"
+"        <tr style='color: #FFFF00'>"
+"            <td align='center' valign='middle' id='soc1'>-- %</td>"
+"            <td align='center' valign='middle' id='soc2'>-- %</td>"
+"        </tr>"
+"        <tr>"
+"            <td colspan='2' align='center' valign='middle'>Current</td>"
+"        </tr>"
+"        <tr style='color: #FFFF00'>"
+"            <td colspan='2' align='center' valign='middle' id='current'>-- A</td>"
+"        </tr>"
+"        <tr>"
+"            <td colspan='2' align='center' valign='middle'>Power</td>"
+"        </tr>"
+"        <tr style='color: #FFFF00'>"
+"            <td colspan='2' align='center' valign='middle' id='power'>-- W</td>"
+"        </tr>"
+"        <tr>"
+"            <td colspan='2' align='center' valign='middle'>Time to discharge</td>"
+"        </tr>"
+"        <tr style='color: #FFFF00'>"
+"            <td colspan='2' align='center' valign='middle' id='remainingTime'>--h --min</td>"
+"        </tr>"
+"    </table>"
+"</body>"
+"</html>";
 
   server.send(200, "text/html", html);
 }
 
-String getState(float current){
-  if(current > 4.0)
-    return "<th width='88%' rowspan='11' align='center' valign='middle' style='color: red; font-size: 120px;'>Battery</th>";
-  else
-    return "<th width='88%' rowspan='11' align='center' valign='middle' style='color: green; font-size: 120px;'>Line</th>";
-}
-
-float getStateOfCharge(float voltage) {
-  return ((voltage-10.5) / 4.0) * 100.0;
-}
-
-int RemainingTime(float voltage, float current)
-{
-   float power = voltage * current;
-   float remainingPower = ((voltage-21) / 8.0) * 8000.0;
-   return (remainingPower / power) * 60;
-}
-
-String convertMinutes(int totalMinutes) {
-    String res = String(totalMinutes / 1440) + "d ";
-    totalMinutes %= 1440;
-    res += String(totalMinutes / 60) + "h ";
-    res += String(totalMinutes % 60) + "m";
-    return res;
+void handleData() {
+  String json = "{";
+  json += "\"battery1Voltage\":" + String(battery1Voltage, 2) + ",";
+  json += "\"battery2Voltage\":" + String(battery2Voltage, 2) + ",";
+  json += "\"current\":" + String(current, 2);
+  json += "}";
+  server.send(200, "application/json", json);
 }
