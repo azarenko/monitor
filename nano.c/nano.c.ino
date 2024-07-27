@@ -1,15 +1,15 @@
 // Pin definitions
-const int currentPin = A0;
-const int battery1Pin = A1;
-const int battery2Pin = A2;
+const int currentPin = A2;
+const int battery1Pin = A0;
+const int battery2Pin = A1;
 
 void setup() {
-  Serial.begin(38400); // Initialize serial communication
+  Serial.begin(9600); // Initialize serial communication
 }
 
-float k1 = (5.0 / 4096.0) * 7.5;
-float k2 = (5.0 / 4096.0) * 15.0;
-float ck1 = (5.0 / 4096.0) * 10.0;
+float k1 = (5.0 / 1024.0) * 7.5;
+float k2 = (5.0 / 1024.0) * 15.0;
+float ck1 = (5.0 / 1024.0) * 10.0;
 
 void loop() {
   Serial.print(analogRead(battery1Pin) * k1);

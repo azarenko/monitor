@@ -6,7 +6,7 @@ const char* ssid = "bober";
 const char* password = "buratino";
 
 // Static IP address configuration
-IPAddress local_IP(192, 168, 1, 184); // Change this to your desired IP address
+IPAddress local_IP(192, 168, 1, 188); // Change this to your desired IP address
 IPAddress gateway(192, 168, 1, 1); // Usually your router's IP address
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8); // Google's DNS
@@ -67,36 +67,51 @@ void parseData(String data) {
 
 // Function to handle the root URL
 void handleRoot() {
-  String html = "<html><head><meta http-equiv='refresh' content='1'></head><body><h1>Battery Monitor</h1><table border='1'><tr><th>Battery 1 Voltage (V)</th><th>Battery 2 Voltage (V)</th><th>Current (A)</th><th>State of Charge</th><th>Power Consumption (W)</th><th>Usage Type</th><th>Prognosed Time to Full Discharge (h)</th></tr>";
-
-  String stateOfCharge1 = getStateOfCharge(battery1Voltage);
-  String stateOfCharge2 = getStateOfCharge(battery2Voltage);
-  float powerConsumption = (battery1Voltage + battery2Voltage) * current;
-  String usageType = (current >= 0) ? "Battery Usage" : "System Supply";
-  float prognosedTime = calculatePrognosedTime(battery1Voltage + battery2Voltage, current);
-
-  html += "<tr><td>" + String(battery1Voltage) + "</td><td>" + String(battery2Voltage) + "</td><td>" + String(current) + "</td><td>" + stateOfCharge1 + ", " + stateOfCharge2 + "</td><td>" + String(powerConsumption) + "</td><td>" + usageType + "</td><td>" + String(prognosedTime) + "</td></tr>";
-  html += "</table></body></html>";
+  String html = "<html><head><meta http-equiv='refresh' content='1'></head><body style='background: black; color: #00AA00;'><table width='100%' height='100%' border='0'><tr> <th width='20%' align='center' valign='middle'>Battery 1</th> <th width='20%' align='center' valign='middle'>Battery 2</th>";
+  
+  html += getState(current);
+  
+  html += "</tr><tr> <td colspan='2' align='center' valign='middle'>Voltage</td></tr> <tr style='color: #FFFF00'> <td align='center' valign='middle'>";
+  html += String(battery1Voltage);
+  html += " V</td> <td align='center' valign='middle'>";
+  html += String(battery2Voltage - battery1Voltage);
+  html += " V</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>State of charge</td> </tr> <tr style='color: #FFFF00'> <td align='center' valign='middle'>";
+  html += String(getStateOfCharge(battery1Voltage));
+  html += " %</td> <td align='center' valign='middle'>";
+  html += String(getStateOfCharge(battery2Voltage - battery1Voltage));
+  html += " %</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Current</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
+  html += String(current);
+  html += " A</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Power</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
+  html += String(battery2Voltage * current);
+  html += " W</td> </tr> <tr> <td colspan='2' align='center' valign='middle'>Time to discharge</td> </tr> <tr style='color: #FFFF00'> <td colspan='2' align='center' valign='middle'>";
+  html += convertMinutes(RemainingTime(battery2Voltage, current));
+  html += "</td> </tr></table></body></html>";
 
   server.send(200, "text/html", html);
 }
 
-// Function to get the state of charge
-String getStateOfCharge(float voltage) {
-  if (voltage >= 14.5) {
-    return "Full Charge";
-  } else if (voltage <= 10.5) {
-    return "Full Discharge";
-  } else {
-    return "Partially Charged";
-  }
+String getState(float current){
+  if(current > 4.0)
+    return "<th width='88%' rowspan='11' align='center' valign='middle' style='color: red; font-size: 120px;'>Battery</th>";
+  else
+    return "<th width='88%' rowspan='11' align='center' valign='middle' style='color: green; font-size: 120px;'>Line</th>";
 }
 
-// Function to calculate the prognosed time to full discharge
-float calculatePrognosedTime(float totalVoltage, float current) {
-  if (current == 0) {
-    return 0; // Avoid division by zero
-  }
-  float capacity = 20; // Assume 20Ah capacity for simplicity
-  return (totalVoltage / current) * capacity;
+float getStateOfCharge(float voltage) {
+  return ((voltage-10.5) / 4.0) * 100.0;
+}
+
+int RemainingTime(float voltage, float current)
+{
+   float power = voltage * current;
+   float remainingPower = ((voltage-21) / 8.0) * 8000.0;
+   return (remainingPower / power) * 60;
+}
+
+String convertMinutes(int totalMinutes) {
+    String res = String(totalMinutes / 1440) + "d ";
+    totalMinutes %= 1440;
+    res += String(totalMinutes / 60) + "h ";
+    res += String(totalMinutes % 60) + "m";
+    return res;
 }
